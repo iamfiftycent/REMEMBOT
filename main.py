@@ -2,8 +2,11 @@ import telebot
 import time
 from datetime import datetime
 import threading
+from zoneinfo import ZoneInfo
 from bot.config import TOKEN
 
+
+krsk_tz = ZoneInfo("Asia/Krasnoyarsk")
 
 DATE_FORMAT = '%d.%m.%Y'
 TIME_FORMAT = '%H:%M'
@@ -93,7 +96,7 @@ def get_text_messages(message):
 
 def check_reminder():
     while True:
-        now = datetime.now()
+        now = datetime.now(krsk_tz)
         for reminder in reminders:
             if (
                 now.date() == reminder['date']
@@ -101,9 +104,9 @@ def check_reminder():
                 and now.time().minute == reminder['time'].minute
             ):
                 bot.send_message(reminder['user_id'], f"<-==-> Напоминаю! <-==->\n"
-                                                      f"((-=====-=-=====-))\n"
+                                                      f"  ========-=-========   \n"
                                                       f"{reminder['text']}\n"
-                                                      f"((-=====-=-=====-))")
+                                                      f"  ========-=-========   ")
         time.sleep(20)
 
 
