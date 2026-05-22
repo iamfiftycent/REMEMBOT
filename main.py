@@ -28,12 +28,34 @@ class WrongDateTime(Exception):
     pass
 
 
+def make_reminder(message, reminder_text, reminder_date, reminder_time):
+    try:
+        now_krsk_tz = datetime.now(krsk_tz)
+        reminder_datetime = datetime.combine(
+            reminder_date,
+            reminder_time,
+            tzinfo=krsk_tz
+        )
+        if now_krsk_tz > reminder_datetime + timedelta(minutes=1):
+            raise WrongDateTime
+        reminder = {
+                'user_id': message.from_user.id,
+                'text': reminder_text,
+                'date': reminder_date,
+                'time': reminder_time,
+            }
+        reminders.append(reminder)
+        bot.send_message(message.from_user.id, f"Создано напоминание:\n"
+                                               f"{reminder_text} "
+                                               f"{reminder_date.strftime('%d.%m.%Y')} "
+                                               f"в {reminder_time.strftime('%H:%M')}")
+    except WrongDateTime:
+        bot.send_message(message.from_user.id, "Время упущено(")
+        get_date(message, reminder_text)
+
+
 def get_time(message, reminder_date, reminder_text):
     try:
-        today_krsk_tz = datetime.now(krsk_tz).date()
-        if reminder_date < today_krsk_tz:
-            bot.send_message(message.from_user.id, "Время упущено(")
-            bot.register_next_step_handler(message, get_date, reminder_text)
         if message.text in ['Отмена', '/back', '/help', 'Назад']:
             raise Cancel
         elif message.text == 'Утром':
@@ -46,35 +68,20 @@ def get_time(message, reminder_date, reminder_text):
             reminder_time = datetime.strptime('18:00', TIME_FORMAT).time()
             raise NextStep
         reminder_time = datetime.strptime(message.text, TIME_FORMAT).time()
-        reminder = {
-            'user_id': message.from_user.id,
-            'text': reminder_text,
-            'date': reminder_date,
-            'time': reminder_time,
-        }
-        reminders.append(reminder)
-        bot.send_message(message.from_user.id, f"Создано напоминание:\n"
-                                               f"{reminder_text} "
-                                               f"{reminder_date.strftime('%d.%m.%Y')} "
-                                               f"в {reminder_time.strftime('%H:%M')}")
+        make_reminder(message,
+                      reminder_text,
+                      reminder_date,
+                      reminder_time)
     except ValueError:
-        bot.send_message(message.from_user.id, "Введи время в формате 'ЧЧ:ММ'")
+        bot.send_message(message.from_user.id, "Введи время в формате 'ЧЧ:ММ' "
+                                               "или введи:\n- Утром\n- В обед"
+                                               "\n-Вечером")
         bot.register_next_step_handler(message, get_time, reminder_date,
                                        reminder_text)
     except Cancel:
         bot.register_next_step_handler(message, get_text_messages)
     except NextStep:
-        reminder = {
-            'user_id': message.from_user.id,
-            'text': reminder_text,
-            'date': reminder_date,
-            'time': reminder_time,
-        }
-        reminders.append(reminder)
-        bot.send_message(message.from_user.id, f"Создано напоминание:\n"
-                                               f"{reminder_text} "
-                                               f"{reminder_date.strftime('%d.%m.%Y')} "
-                                               f"в {reminder_time.strftime('%H:%M')}")
+        make_reminder(message, reminder_text, reminder_date, reminder_time)
 
 
 def get_date(message, reminder_text):
@@ -86,10 +93,10 @@ def get_date(message, reminder_text):
             reminder_date = today_krsk_tz
             raise NextStep
         elif message.text == 'Завтра':
-            reminder_date = (today_krsk_tz + timedelta(days=1)).date()
+            reminder_date = (today_krsk_tz + timedelta(days=1))
             raise NextStep
         reminder_date = datetime.strptime(message.text, DATE_FORMAT).date()
-        bot.send_message(message.from_user.id, "Введи время в формате 'ЧЧ:ММ'"
+        bot.send_message(message.from_user.id, "Введи время в формате 'ЧЧ:ММ' "
                                                "или введи:\n- Утром\n- В обед"
                                                "\n-Вечером")
         bot.register_next_step_handler(message, get_time,
@@ -102,7 +109,7 @@ def get_date(message, reminder_text):
     except Cancel:
         bot.register_next_step_handler(message, get_text_messages)
     except NextStep:
-        bot.send_message(message.from_user.id, "Введи время в формате 'ЧЧ:ММ'"
+        bot.send_message(message.from_user.id, "Введи время в формате 'ЧЧ:ММ' "
                                                "или введи:\n- Утром\n- В обед"
                                                "\n- Вечером")
         bot.register_next_step_handler(message, get_time,
@@ -151,10 +158,10 @@ def check_reminder():
                 and now.time().hour == reminder['time'].hour
                 and now.time().minute == reminder['time'].minute
             ):
-                bot.send_message(reminder['user_id'], f"<-==-> Напоминаю! <-==->\n"
-                                                      f"  ========-=-========   \n"
+                bot.send_message(reminder['user_id'], f"Напоминаю!\n"
+                                                      f"===================   \n"
                                                       f"{reminder['text']}\n"
-                                                      f"  ========-=-========   ")
+                                                      f"===================   ")
         time.sleep(20)
 
 
